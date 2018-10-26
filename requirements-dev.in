@@ -1,0 +1,6 @@
+-c requirements.txt
+pytest
+pytest-django
+isort
+flake8
+flake8-print
