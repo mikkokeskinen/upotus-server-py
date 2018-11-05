@@ -6,10 +6,10 @@ from rest_framework import routers
 from game import viewsets as game_viewsets
 
 router = routers.DefaultRouter()
-router.register(r'game', game_viewsets.GameViewSet)
-router.register(r'player', game_viewsets.PlayerViewSet)
-router.register(r'ship', game_viewsets.ShipViewSet)
-router.register(r'turn', game_viewsets.TurnViewSet)
+router.register(r'game', game_viewsets.GameViewSet, basename='game')
+router.register(r'player', game_viewsets.PlayerViewSet, basename='player')
+router.register(r'ship', game_viewsets.ShipViewSet, basename='ship')
+router.register(r'turn', game_viewsets.TurnViewSet, basename='turn')
 
 urlpatterns = [
     path('', include(router.urls)),

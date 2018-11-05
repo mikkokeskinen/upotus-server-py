@@ -10,7 +10,7 @@ from game.enums import Orientation, ShipType
 
 class Game(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
     winner = models.ForeignKey('game.Player', verbose_name=_("Winner"), related_name='won_games', null=True, blank=True,
@@ -22,7 +22,10 @@ class Player(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     game = models.ForeignKey(Game, verbose_name=_("Game"), related_name='players', on_delete=models.CASCADE)
     user = models.ForeignKey(get_user_model(), verbose_name=_("User"), related_name='players', on_delete=models.CASCADE)
-    joined_at = models.DateTimeField(null=True, blank=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (("game", "user"),)
 
 
 class Ship(models.Model):

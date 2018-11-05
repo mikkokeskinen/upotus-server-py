@@ -8,10 +8,12 @@ class GameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Game
         fields = ('id', 'created_at', 'started_at', 'ended_at', 'winner', 'announce_sinking', 'players')
-        read_only_fields = ('created_at', 'started_at', 'ended_at', 'winner')
+        read_only_fields = ('created_at', 'started_at', 'ended_at', 'winner', 'players')
 
 
 class PlayerSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Player
         fields = '__all__'
