@@ -27,6 +27,9 @@ class Player(models.Model):
     class Meta:
         unique_together = (("game", "user"),)
 
+    def are_ships_placed(self):
+        return False
+
 
 class Ship(models.Model):
     player = models.ForeignKey(Player, verbose_name=_("Player"), related_name='ships', on_delete=models.CASCADE)
