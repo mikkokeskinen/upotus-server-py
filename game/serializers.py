@@ -1,5 +1,6 @@
 from enumfields.drf import EnumSupportSerializerMixin
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .models import Game, Player, Ship, Turn
 
@@ -18,6 +19,20 @@ class PlayerSerializer(serializers.ModelSerializer):
         model = Player
         fields = '__all__'
         read_only_fields = ('joined_at',)
+
+    def validate(self, data):
+        user = self.context['request'].user
+        game = data['game']
+
+        if game.players.count() > 1:
+            raise ValidationError('There can be only two players per game')
+
+        if user in [p.user for p in game.players.all()]:
+            raise ValidationError('The two players must be different')
+
+        data['user'] = user
+
+        return data
 
 
 class ShipSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):

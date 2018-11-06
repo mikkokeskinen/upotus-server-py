@@ -28,9 +28,6 @@ class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
 
 class ShipViewSet(viewsets.ModelViewSet):
     queryset = Ship.objects.all()
