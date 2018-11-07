@@ -41,6 +41,22 @@ class ShipSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
         fields = ('id', 'player', 'type', 'x', 'y', 'orientation', 'sink_turn')
         read_only_fields = ('sink_turn', )
 
+    def validate(self, data):
+        user = self.context['request'].user
+        if user != data['player'].user:
+            raise ValidationError("Can't add another players ships")
+
+        if data['player'].ships.filter(type=data['type']).exists():
+            raise ValidationError("Only one ship per type allowed")
+
+        for existing_ship in data['player'].ships.all():
+            if existing_ship.overlaps_values(
+                    ship_type=data['type'], x=data['x'], y=data['x'],
+                    orientation=data['orientation']):
+                raise ValidationError("Ships can't overlap")
+
+        return data
+
 
 class TurnSerializer(serializers.ModelSerializer):
     class Meta:
