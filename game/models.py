@@ -46,6 +46,9 @@ class Ship(models.Model):
     y = models.IntegerField()
     orientation = EnumField(Orientation, max_length=30)
 
+    class Meta:
+        unique_together = (("player", "type"),)
+
     def get_coordinates(self):
         coordinates = set()
         x_delta = 0
@@ -65,9 +68,9 @@ class Ship(models.Model):
     def overlaps(self, ship):
         return bool(self.get_coordinates() & ship.get_coordinates())
 
-    def overlaps_values(self, ship_type=None, x=None, y=None,
-                        orientation=None):
-        ship = Ship(type=ship_type, x=x, y=y, orientation=orientation)
+    def overlaps_values(self, type=None, x=None, y=None,
+                        orientation=None, **kwargs):
+        ship = Ship(type=type, x=x, y=y, orientation=orientation)
 
         return self.overlaps(ship)
 
@@ -80,3 +83,6 @@ class Turn(models.Model):
     hit = models.BooleanField(default=False)
     sank_ship = models.OneToOneField(Ship, verbose_name=_("Sank ship"), related_name='sink_turn', null=True,
                                      blank=True, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (("player", "number"),)
