@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.db.models import Max
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
@@ -37,3 +39,15 @@ class ShipViewSet(viewsets.ModelViewSet):
 class TurnViewSet(viewsets.ModelViewSet):
     queryset = Turn.objects.all()
     serializer_class = TurnSerializer
+
+    def perform_create(self, serializer):
+        max_number = Turn.objects.filter(
+            player=serializer.validated_data['player']).aggregate(
+            Max('number'))['number__max']
+        if not max_number:
+            max_number = 0
+        # TODO: possible race condition
+        serializer.validated_data['number'] = max_number + 1
+        serializer.save()
+
+        # TODO: hit and sink_ship
