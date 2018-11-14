@@ -2,7 +2,8 @@ import argparse
 import re
 
 from django.core.management.base import BaseCommand, CommandError
-from game.models import Game, Ship, Turn
+
+from game.models import Game
 
 BOARD_SIDE_LENGTH = 10
 
@@ -34,6 +35,7 @@ def board_as_string(board):
 
     return result
 
+
 class Command(BaseCommand):
     help = 'Print game state'
 
@@ -47,7 +49,11 @@ class Command(BaseCommand):
             raise CommandError('Game "{}" does not exist'.format(
                 options['game_id']))
 
-        self.stdout.write('Game: {}'.format(options['game_id']))
+        self.stdout.write('Game:')
+        self.stdout.write(' Id: {}'.format(game.id))
+        self.stdout.write(' Created at: {}'.format(game.created_at))
+        self.stdout.write(' Started at: {}'.format(game.started_at))
+        self.stdout.write(' Ended at: {}\n\n'.format(game.ended_at))
 
         players = list(game.players.all())
 

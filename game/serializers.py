@@ -49,9 +49,17 @@ class ShipSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
         if data['player'].ships.filter(type=data['type']).exists():
             raise ValidationError("Only one ship per type allowed")
 
+        ship = Ship(**data)
+
+        if not ship.is_valid_coordinates():
+            raise ValidationError("Ship cordinates are not valid")
+
         for existing_ship in data['player'].ships.all():
-            if existing_ship.overlaps_values(**data):
+            if existing_ship.overlaps(ship):
                 raise ValidationError("Ships can't overlap")
+
+        if data['player'].game.has_started():
+            raise ValidationError("Can't add ships after the game has started")
 
         return data
 
@@ -66,6 +74,9 @@ class TurnSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         if user != data['player'].user:
             raise ValidationError("Can't take another players turn")
+
+        if not data['player'].game.has_started():
+            raise ValidationError("Can't take turns before the game has started")
 
         if Turn.objects.filter(player=data['player'], x=data['x'], y=data['y']).count():
             raise ValidationError("Can't use same coordinates twice")
