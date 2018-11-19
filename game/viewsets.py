@@ -1,4 +1,5 @@
-from django.db.models import Max
+import random
+
 from django.utils import timezone
 from rest_framework import mixins, viewsets
 from rest_framework.exceptions import PermissionDenied
@@ -61,6 +62,7 @@ class ShipViewSet(viewsets.ModelViewSet):
         game = serializer.instance.player.game
         if game.are_all_ships_placed():
             game.started_at = timezone.now()
+            game.starting_player = random.choice(game.players.all())
             game.save()
 
     def destroy(self, request, *args, **kwargs):
@@ -77,11 +79,8 @@ class TurnViewSet(CreateReadViewSet):
     serializer_class = TurnSerializer
 
     def perform_create(self, serializer):
-        max_number = Turn.objects.filter(
-            player=serializer.validated_data['player']).aggregate(
-            Max('number'))['number__max']
-        if not max_number:
-            max_number = 0
+        max_number = serializer.validated_data['player'].game.get_max_turn_number()
+
         # TODO: possible race condition
         serializer.validated_data['number'] = max_number + 1
         serializer.save()
@@ -95,5 +94,7 @@ class TurnViewSet(CreateReadViewSet):
 
             if game.announce_sinking and game.will_sink(turn=turn, ship=ship):
                 serializer.instance.sank_ship = ship
+
+            game.check_for_winner()
 
             serializer.instance.save()

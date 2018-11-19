@@ -3,6 +3,8 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import Max
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from enumfields import EnumField
 
@@ -25,6 +27,9 @@ class Game(models.Model):
     winner = models.ForeignKey('game.Player', verbose_name=_("Winner"), related_name='won_games', null=True, blank=True,
                                on_delete=models.CASCADE)
     announce_sinking = models.BooleanField(default=True)
+    starting_player = models.ForeignKey('game.Player', verbose_name=_("Starting player"),
+                                        related_name='starting_player_games', null=True, blank=True,
+                                        on_delete=models.CASCADE)
 
     def has_started(self):
         return self.started_at is not None
@@ -62,6 +67,33 @@ class Game(models.Model):
 
         return ship_count == 10
 
+    def get_max_turn_number(self):
+        max_number = Turn.objects.filter(player__in=self.players.all()).aggregate(Max('number'))['number__max']
+        if not max_number:
+            max_number = 0
+
+        return max_number
+
+    def get_latest_turn(self):
+        return Turn.objects.filter(player__in=self.players.all()).order_by('-number').first()
+
+    def check_for_winner(self):
+        players = list(self.players.all())
+
+        for i, player in enumerate(players):
+            other_player = players[int(not i)]
+            ship_coordinates = set()
+            for ship in player.ships.all():
+                ship_coordinates.update(ship.get_coordinates())
+
+            shots = {(t.x, t.y) for t in other_player.turns.all()}
+
+            if ship_coordinates.issubset(shots):
+                # TODO: equalizing turn and draw
+                self.winner = other_player
+                self.ended_at = timezone.now()
+                self.save()
+
 
 class Player(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -88,6 +120,10 @@ class Ship(models.Model):
     class Meta:
         unique_together = (("player", "type"),)
 
+    def __str__(self):
+        return 'Ship id={} type={} x={} y={} orientation={}'.format(self.id, self.type, self.x, self.y,
+                                                                    self.orientation)
+
     def get_coordinates(self):
         coordinates = set()
         x_delta = 0
@@ -110,6 +146,16 @@ class Ship(models.Model):
     def is_valid_coordinates(self):
         for coordinate in self.get_coordinates():
             if coordinate[0] >= 10 or coordinate[1] >= 10:
+                return False
+
+        return True
+
+    def is_valid_ship_position(self):
+        if not self.is_valid_coordinates():
+            return False
+
+        for ship in self.player.ships.all():
+            if self.overlaps(ship):
                 return False
 
         return True

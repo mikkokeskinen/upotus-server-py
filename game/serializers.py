@@ -75,8 +75,20 @@ class TurnSerializer(serializers.ModelSerializer):
         if user != data['player'].user:
             raise ValidationError("Can't take another players turn")
 
-        if not data['player'].game.has_started():
+        game = data['player'].game
+        if not game.has_started():
             raise ValidationError("Can't take turns before the game has started")
+
+        if game.has_ended():
+            raise ValidationError("Game has already ended")
+
+        latest_turn = game.get_latest_turn()
+
+        if not latest_turn and game.starting_player != data['player']:
+            raise ValidationError("The other player is the starting player")
+
+        if latest_turn and latest_turn.player == data['player']:
+            raise ValidationError("It's the other players turn")
 
         if Turn.objects.filter(player=data['player'], x=data['x'], y=data['y']).count():
             raise ValidationError("Can't use same coordinates twice")

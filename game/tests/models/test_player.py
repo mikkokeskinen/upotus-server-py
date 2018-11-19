@@ -1,6 +1,6 @@
 import pytest
 
-from game.enums import ShipType, Orientation
+from game.enums import Orientation, ShipType
 
 
 @pytest.mark.django_db
