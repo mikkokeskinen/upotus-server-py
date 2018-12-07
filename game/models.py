@@ -26,7 +26,9 @@ class Game(models.Model):
     ended_at = models.DateTimeField(null=True, blank=True)
     winner = models.ForeignKey('game.Player', verbose_name=_("Winner"), related_name='won_games', null=True, blank=True,
                                on_delete=models.CASCADE)
+    draw = models.BooleanField(default=False)
     announce_sinking = models.BooleanField(default=True)
+    allow_draw = models.BooleanField(default=False)
     starting_player = models.ForeignKey('game.Player', verbose_name=_("Starting player"),
                                         related_name='starting_player_games', null=True, blank=True,
                                         on_delete=models.CASCADE)
@@ -77,20 +79,37 @@ class Game(models.Model):
     def get_latest_turn(self):
         return Turn.objects.filter(player__in=self.players.all()).order_by('-number').first()
 
+    def get_opponent_to(self, player):
+        return self.players.exclude(id=player.id).first()
+
     def check_for_winner(self):
-        players = list(self.players.all())
+        players = self.players.all()
 
-        for i, player in enumerate(players):
-            other_player = players[int(not i)]
-            ship_coordinates = set()
-            for ship in player.ships.all():
-                ship_coordinates.update(ship.get_coordinates())
+        sunk_players = []
 
-            shots = {(t.x, t.y) for t in other_player.turns.all()}
+        for player in players:
+            if player.are_ships_sunk():
+                sunk_players.append(player)
 
-            if ship_coordinates.issubset(shots):
-                # TODO: equalizing turn and draw
-                self.winner = other_player
+        if not sunk_players:
+            return
+
+        if not self.allow_draw:
+            self.winner = self.get_opponent_to(sunk_players[0])
+            self.ended_at = timezone.now()
+            self.save()
+            return
+
+        if len(sunk_players) == 2:
+            self.draw = True
+            self.ended_at = timezone.now()
+            self.save()
+        else:
+            sunk_player = sunk_players[0]
+            opponent = self.get_opponent_to(sunk_player)
+
+            if sunk_player.turns.count() == opponent.turns.count():
+                self.winner = opponent
                 self.ended_at = timezone.now()
                 self.save()
 
@@ -104,8 +123,23 @@ class Player(models.Model):
     class Meta:
         unique_together = (("game", "user"),)
 
+    def get_all_ship_coordinates(self):
+        ship_coordinates = set()
+        for ship in self.ships.all():
+            ship_coordinates.update(ship.get_coordinates())
+
+        return ship_coordinates
+
     def are_ships_placed(self):
         return self.ships.count() == 5
+
+    def are_ships_sunk(self):
+        other_player = self.game.get_opponent_to(self)
+
+        ship_coordinates = self.get_all_ship_coordinates()
+        shots = {(t.x, t.y) for t in other_player.turns.all()}
+
+        return ship_coordinates.issubset(shots)
 
 
 class Ship(models.Model):

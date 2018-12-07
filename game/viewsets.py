@@ -95,6 +95,6 @@ class TurnViewSet(CreateReadViewSet):
             if game.announce_sinking and game.will_sink(turn=turn, ship=ship):
                 serializer.instance.sank_ship = ship
 
-            game.check_for_winner()
-
             serializer.instance.save()
+
+        game.check_for_winner()
