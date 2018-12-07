@@ -21,11 +21,16 @@ class Command(BaseCommand):
 
         self.stdout.write('Game:')
         self.stdout.write(' Id: {}'.format(game.id))
+        self.stdout.write(' Announce sinking: {}'.format(game.announce_sinking))
+        self.stdout.write(' Allow draw: {}'.format(game.allow_draw))
         self.stdout.write(' Created at: {}'.format(game.created_at))
         self.stdout.write(' Started at: {}'.format(game.started_at))
         self.stdout.write(' Ended at: {}'.format(game.ended_at))
         self.stdout.write(' Starting player: {} ({})'.format(game.starting_player.user, game.starting_player.id))
-        self.stdout.write(' Winner: {} ({})\n\n'.format(game.winner.user, game.winner.id))
+        if game.winner:
+            self.stdout.write(' Winner: {} ({})'.format(game.winner.user, game.winner.id))
+
+        self.stdout.write('\n')
 
         players = list(game.players.all())
 

@@ -17,14 +17,15 @@ def xy_to_i(x, y, side_length):
 
 
 def board_as_string(board, side_length):
-    result = '{}{}{}'.format('╔', '═' * side_length, '╗\n')
+    result = '  ' + ''.join([str(i) for i in range(0, 10)]) + '\n'
+    result += '{}{}{}'.format(' ╔', '═' * side_length, '╗\n')
 
     for y in range(0, side_length):
-        result += '║'
+        result += '{}║'.format(y)
         for x in range(0, side_length):
             result += board[xy_to_i(x, y, side_length)]
         result += '║\n'
 
-    result += '{}{}{}'.format('╚', '═' * side_length, '╝\n')
+    result += ' {}{}{}'.format('╚', '═' * side_length, '╝\n')
 
     return result
