@@ -65,6 +65,8 @@ class ShipSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
 
 
 class TurnSerializer(serializers.ModelSerializer):
+    sank_ship = ShipSerializer(required=False)
+
     class Meta:
         model = Turn
         fields = '__all__'
