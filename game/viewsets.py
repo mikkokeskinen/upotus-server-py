@@ -43,8 +43,10 @@ class GameViewSet(CreateReadViewSet):
 
 class PlayerViewSet(CreateDeleteReadViewSet):
     permission_classes = [IsAuthenticated, IsOwner]
-    queryset = Player.objects.all()
     serializer_class = PlayerSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        return Player.objects.filter(user=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
         player = self.get_object()
@@ -57,8 +59,10 @@ class PlayerViewSet(CreateDeleteReadViewSet):
 
 class ShipViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsPlayer]
-    queryset = Ship.objects.all()
     serializer_class = ShipSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        return Ship.objects.filter(player__user=self.request.user)
 
     def perform_create(self, serializer):
         super().perform_create(serializer)
@@ -79,8 +83,10 @@ class ShipViewSet(viewsets.ModelViewSet):
 
 class TurnViewSet(CreateReadViewSet):
     permission_classes = [IsAuthenticated, IsPlayer]
-    queryset = Turn.objects.all()
     serializer_class = TurnSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        return Turn.objects.filter(player__game__players__user=self.request.user).distinct()
 
     @transaction.atomic
     def perform_create(self, serializer):
