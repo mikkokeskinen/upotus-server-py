@@ -1,9 +1,13 @@
 import random
 
+from django.contrib.auth import get_user_model
+from django.db import connection, transaction
 from django.utils import timezone
 from rest_framework import mixins, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from game.models import Game, Player, Ship, Turn
@@ -78,10 +82,13 @@ class TurnViewSet(CreateReadViewSet):
     queryset = Turn.objects.all()
     serializer_class = TurnSerializer
 
+    @transaction.atomic
     def perform_create(self, serializer):
+        with connection.cursor() as cursor:
+            cursor.execute('LOCK TABLE {}'.format(Turn._meta.db_table))
+
         max_number = serializer.validated_data['player'].game.get_max_turn_number()
 
-        # TODO: possible race condition
         serializer.validated_data['number'] = max_number + 1
         serializer.save()
 
@@ -98,3 +105,39 @@ class TurnViewSet(CreateReadViewSet):
             serializer.instance.save()
 
         game.check_for_winner()
+
+
+def generate_guest_username():
+    username = 'guest{:06d}'.format(random.randrange(0, 999999))
+    user_class = get_user_model()
+
+    while user_class.objects.filter(username=username).exists():
+        username = 'guest{:06d}'.format(random.randrange(0, 999999))
+
+    return username
+
+
+class CreateUser(APIView):
+    @transaction.atomic
+    def post(self, request, format=None):
+        user_class = get_user_model()
+
+        with connection.cursor() as cursor:
+            cursor.execute('LOCK TABLE {}'.format(user_class._meta.db_table))
+
+        username = request.data.get('username')
+        if not username:
+            username = generate_guest_username()
+
+        password = request.data.get('password')
+        if not password:
+            password = user_class.objects.make_random_password()
+
+        user = user_class.objects.create_user(username=username, password=password, email=None)
+
+        result = {
+            "username": user.username,
+            "password": password,
+        }
+
+        return Response(result)
