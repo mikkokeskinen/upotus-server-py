@@ -26,7 +26,10 @@ class Command(BaseCommand):
         self.stdout.write(' Created at: {}'.format(game.created_at))
         self.stdout.write(' Started at: {}'.format(game.started_at))
         self.stdout.write(' Ended at: {}'.format(game.ended_at))
-        self.stdout.write(' Starting player: {} ({})'.format(game.starting_player.user, game.starting_player.id))
+        self.stdout.write(' Starting player: {} ({})'.format(
+            game.starting_player.user if game.starting_player else '-',
+            game.starting_player.id if game.starting_player else '-'
+        ))
         if game.winner:
             self.stdout.write(' Winner: {} ({})'.format(game.winner.user, game.winner.id))
 
@@ -35,7 +38,10 @@ class Command(BaseCommand):
         players = list(game.players.all())
 
         for player in players:
-            other_player = [p for p in players if p != player][0]
+            try:
+                other_player = [p for p in players if p != player][0]
+            except IndexError:
+                other_player = None
 
             self.stdout.write('Player: {} ({})'.format(player.user.username, player.id))
             self.stdout.write(' Ships: {}'.format(', '.join([str(s.type) for s in player.ships.all()])))
@@ -43,13 +49,15 @@ class Command(BaseCommand):
 
             board = [' '] * (BOARD_SIDE_LENGTH * BOARD_SIDE_LENGTH)
 
-            for ship in player.ships.all():
-                for coord in ship.get_coordinates():
-                    ship_char = ship.type.value[0].upper()
-                    board[xy_to_i(coord[0], coord[1], BOARD_SIDE_LENGTH)] = ship_char
+            if player:
+                for ship in player.ships.all():
+                    for coord in ship.get_coordinates():
+                        ship_char = ship.type.value[0].upper()
+                        board[xy_to_i(coord[0], coord[1], BOARD_SIDE_LENGTH)] = ship_char
 
-            for turn in other_player.turns.all():
-                turn_char = 'X' if turn.hit else 'o'
-                board[xy_to_i(turn.x, turn.y, BOARD_SIDE_LENGTH)] = turn_char
+            if other_player:
+                for turn in other_player.turns.all():
+                    turn_char = 'X' if turn.hit else 'o'
+                    board[xy_to_i(turn.x, turn.y, BOARD_SIDE_LENGTH)] = turn_char
 
             self.stdout.write(board_as_string(board, BOARD_SIDE_LENGTH))
